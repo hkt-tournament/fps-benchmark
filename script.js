@@ -1,5 +1,6 @@
 /**
  * WebGL Volumetric Shader Benchmark Engine
+ * Inspired by Volume Shader BM (3D Raymarching Engine)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // --- WebGL Shaders (Raymarching Volumetric Engine) ---
+  // --- WebGL Shaders (Volumetric 3D Raymarching Engine) ---
   const vsSource = `
     attribute vec2 position;
     void main() {
@@ -40,46 +41,55 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   `;
 
-  // Fragment Shader: High-load procedural 3D noise raymarcher
+  // Fragment Shader: 3D Volumetric Volume Shader Algorithm
   const fsSource = `
     precision highp float;
     uniform vec2 u_resolution;
     uniform float u_time;
 
-    // 3D Fractal SDF Noise for Heavy GPU Computation
-    float map(vec3 p) {
+    // 3D Volume Density Function (Procedural Volumetric Noise)
+    float mapVolume(vec3 p) {
       vec3 q = p;
-      q.z += u_time * 0.8;
-      float s = 1.0;
-      float d = 0.0;
-      for (int i = 0; i < 5; i++) {
-        q = abs(q) - 0.5;
-        d += length(cross(q, vec3(0.577))) - 0.2;
-        q *= 1.4;
-      }
-      return d * 0.1;
+      q.z += u_time * 0.5;
+      
+      // Volumetric Noise Layers
+      float d = length(p) - 1.2;
+      float wave = sin(q.x * 3.0 + u_time) * cos(q.y * 3.0 + u_time) * sin(q.z * 3.0);
+      return max(-d, wave);
     }
 
+    // Light Attenuation & Density Accumulation
     void main() {
       vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
-      vec3 ro = vec3(0.0, 0.0, -2.5); // Ray Origin
-      vec3 rd = normalize(vec3(uv, 1.0)); // Ray Direction
+      
+      // Ray setup
+      vec3 ro = vec3(0.0, 0.0, -3.0); // Camera Ray Origin
+      vec3 rd = normalize(vec3(uv, 1.2)); // Ray Direction
 
       float t = 0.0;
-      vec3 col = vec3(0.0);
+      vec3 color = vec3(0.0);
+      float density = 0.0;
 
-      // Heavy Raymarching Loop
-      for (int i = 0; i < 80; i++) {
+      // Volumetric Marching Loop
+      for (int i = 0; i < 96; i++) {
         vec3 p = ro + rd * t;
-        float d = map(p);
-        if (d < 0.001 || t > 10.0) break;
-        t += d * 0.5;
-        col += vec3(0.02, 0.01, 0.04) / (d + 0.05);
+        float d = mapVolume(p);
+
+        if (d > 0.0) {
+          float stepDensity = d * 0.05;
+          density += stepDensity;
+          
+          // Color Gradients (Blue-Purple Dynamic Glow)
+          vec3 lightCol = mix(vec3(0.23, 0.51, 0.96), vec3(0.55, 0.36, 0.96), p.z * 0.5 + 0.5);
+          color += lightCol * stepDensity * (1.0 - density);
+        }
+
+        t += 0.04; // Step size
+        if (density >= 1.0 || t > 6.0) break;
       }
 
-      // Color Grading
-      col *= vec3(0.3, 0.5, 0.9);
-      gl_FragColor = vec4(col, 1.0);
+      // Final Volumetric Pixel Output
+      gl_FragColor = vec4(color, 1.0);
     }
   `;
 
