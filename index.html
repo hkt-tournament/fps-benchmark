@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FPS Benchmark — Browser Performance Suite</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="bg-glow blob-1"></div>
+  <div class="bg-glow blob-2"></div>
+
+  <header class="navbar">
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">FPS<strong>BENCH</strong></span>
+    </div>
+    <nav>
+      <a href="#benchmark">Dashboard</a>
+      <a href="#device-info">Specs</a>
+      <a href="#history">History</a>
+      <a href="#about">About</a>
+    </nav>
+  </header>
+
+  <main class="container">
+    
+    <section class="hero">
+      <h1>Measure Your Browser's <span class="gradient-text">Real Graphics Power</span></h1>
+      <p>A lightweight, stress-testing GPU benchmark engine running natively in your browser using WebGL2.</p>
+    </section>
+
+    <section id="benchmark" class="grid-layout">
+      
+      <div class="card canvas-card">
+        <div class="card-header">
+          <h2>WebGL Stress Engine</h2>
+          <span id="status-badge" class="badge">Ready</span>
+        </div>
+        
+        <div class="canvas-wrapper">
+          <canvas id="render-canvas"></canvas>
+          <div id="loading-overlay" class="overlay hidden">
+            <div class="spinner"></div>
+            <p>Initializing Shader Pipeline...</p>
+          </div>
+        </div>
+
+        <div class="progress-container">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+
+        <div class="controls">
+          <button id="btn-start" class="btn btn-primary">Start Benchmark (30s)</button>
+          <button id="btn-stop" class="btn btn-secondary" disabled>Stop</button>
+          <button id="btn-reset" class="btn btn-outline">Reset</button>
+        </div>
+      </div>
+
+      <div class="card metrics-card">
+        <h2>Live Metrics</h2>
+        
+        <div class="metrics-primary">
+          <div class="metric-big">
+            <span class="label">Current FPS</span>
+            <span id="val-fps" class="value gradient-text">00</span>
+          </div>
+          <div class="metric-big">
+            <span class="label">Frame Time</span>
+            <span id="val-frametime" class="value">0.0 <small>ms</small></span>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <span class="label">Avg FPS</span>
+            <span id="val-avg-fps" class="val">0</span>
+          </div>
+          <div class="metric-item">
+            <span class="label">Min FPS</span>
+            <span id="val-min-fps" class="val">0</span>
+          </div>
+          <div class="metric-item">
+            <span class="label">Max FPS</span>
+            <span id="val-max-fps" class="val">0</span>
+          </div>
+          <div class="metric-item">
+            <span class="label">Est. Refresh Rate</span>
+            <span id="val-hz" class="val">-- Hz</span>
+          </div>
+        </div>
+
+        <div class="graph-container">
+          <span class="label">Framerate Graph</span>
+          <canvas id="graph-canvas" height="80"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <section id="results" class="card results-card hidden">
+      <div class="results-content">
+        <h2>Benchmark Complete</h2>
+        <div class="score-box">
+          <span class="score-title">Performance Score</span>
+          <span id="val-score" class="score-number gradient-text">0</span>
+        </div>
+        <p id="score-rating">Calculating rating...</p>
+      </div>
+    </section>
+
+    <section id="device-info" class="card">
+      <h2>System Hardware & Environment</h2>
+      <div class="specs-grid">
+        <div class="spec-item">
+          <span class="spec-label">GPU Renderer</span>
+          <span id="spec-gpu" class="spec-val">Detecting...</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">WebGL Support</span>
+          <span id="spec-webgl" class="spec-val">Detecting...</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">CPU Logical Cores</span>
+          <span id="spec-cpu" class="spec-val">Detecting...</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">Device RAM</span>
+          <span id="spec-ram" class="spec-val">Detecting...</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">Screen Resolution</span>
+          <span id="spec-res" class="spec-val">Detecting...</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">Device Pixel Ratio</span>
+          <span id="spec-dpr" class="spec-val">Detecting...</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">Browser</span>
+          <span id="spec-browser" class="spec-val">Detecting...</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="history" class="card">
+      <h2>Previous Benchmarks</h2>
+      <div class="table-wrapper">
+        <table id="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Avg FPS</th>
+              <th>Min FPS</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="about" class="card">
+      <h2>About FPS Benchmark</h2>
+      <p>FPS Benchmark renders a procedural, multi-layered raymarching-inspired 2D fragment shader on a Canvas element. By continuously shifting pixel values across high frame rates, it stresses both single-core CPU draw execution and GPU rasterization pipelines to deliver an accurate baseline metric of modern browser hardware acceleration performance.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>&copy; 2026 FPS Benchmark. Open Source & Copyright Safe.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
