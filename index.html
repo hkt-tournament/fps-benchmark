@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FPS Benchmark — Browser Performance Suite</title>
+  <title>FPS Benchmark — Volumetric WebGL Performance Test</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,33 +21,28 @@
     </div>
     <nav>
       <a href="#benchmark">Dashboard</a>
-      <a href="#device-info">Specs</a>
+      <a href="#device-info">Hardware Specs</a>
       <a href="#history">History</a>
-      <a href="#about">About</a>
     </nav>
   </header>
 
   <main class="container">
     
     <section class="hero">
-      <h1>Measure Your Browser's <span class="gradient-text">Real Graphics Power</span></h1>
-      <p>A lightweight, stress-testing GPU benchmark engine running natively in your browser using WebGL2.</p>
+      <h1>Volumetric <span class="gradient-text">GPU Shader Benchmark</span></h1>
+      <p>A real-time WebGL raymarching engine designed to stress-test your GPU rasterization performance directly in your browser.</p>
     </section>
 
     <section id="benchmark" class="grid-layout">
       
       <div class="card canvas-card">
         <div class="card-header">
-          <h2>WebGL Stress Engine</h2>
-          <span id="status-badge" class="badge">Ready</span>
+          <h2>Raymarching Stress Engine</h2>
+          <span id="status-badge" class="badge">Idle</span>
         </div>
         
         <div class="canvas-wrapper">
-          <canvas id="render-canvas"></canvas>
-          <div id="loading-overlay" class="overlay hidden">
-            <div class="spinner"></div>
-            <p>Initializing Shader Pipeline...</p>
-          </div>
+          <canvas id="gl-canvas"></canvas>
         </div>
 
         <div class="progress-container">
@@ -79,15 +74,15 @@
 
         <div class="metrics-grid">
           <div class="metric-item">
-            <span class="label">Avg FPS</span>
+            <span class="label">Average FPS</span>
             <span id="val-avg-fps" class="val">0</span>
           </div>
           <div class="metric-item">
-            <span class="label">Min FPS</span>
+            <span class="label">Minimum FPS</span>
             <span id="val-min-fps" class="val">0</span>
           </div>
           <div class="metric-item">
-            <span class="label">Max FPS</span>
+            <span class="label">Maximum FPS</span>
             <span id="val-max-fps" class="val">0</span>
           </div>
           <div class="metric-item">
@@ -116,14 +111,14 @@
     </section>
 
     <section id="device-info" class="card">
-      <h2>System Hardware & Environment</h2>
+      <h2>Hardware & Environment Info</h2>
       <div class="specs-grid">
         <div class="spec-item">
           <span class="spec-label">GPU Renderer</span>
           <span id="spec-gpu" class="spec-val">Detecting...</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">WebGL Support</span>
+          <span class="spec-label">WebGL Pipeline</span>
           <span id="spec-webgl" class="spec-val">Detecting...</span>
         </div>
         <div class="spec-item">
@@ -131,7 +126,7 @@
           <span id="spec-cpu" class="spec-val">Detecting...</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">Device RAM</span>
+          <span class="spec-label">Device Memory</span>
           <span id="spec-ram" class="spec-val">Detecting...</span>
         </div>
         <div class="spec-item">
@@ -143,7 +138,7 @@
           <span id="spec-dpr" class="spec-val">Detecting...</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">Browser</span>
+          <span class="spec-label">User Agent</span>
           <span id="spec-browser" class="spec-val">Detecting...</span>
         </div>
       </div>
@@ -167,15 +162,10 @@
       </div>
     </section>
 
-    <section id="about" class="card">
-      <h2>About FPS Benchmark</h2>
-      <p>FPS Benchmark renders a procedural, multi-layered raymarching-inspired 2D fragment shader on a Canvas element. By continuously shifting pixel values across high frame rates, it stresses both single-core CPU draw execution and GPU rasterization pipelines to deliver an accurate baseline metric of modern browser hardware acceleration performance.</p>
-    </section>
-
   </main>
 
   <footer>
-    <p>&copy; 2026 FPS Benchmark. Open Source & Copyright Safe.</p>
+    <p>&copy; 2026 FPS Benchmark Engine. Fully static and deployment-ready.</p>
   </footer>
 
   <script src="script.js"></script>

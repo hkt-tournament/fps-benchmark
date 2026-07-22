@@ -1,11 +1,10 @@
 /**
- * FPS Benchmark Core Engine
- * Copyright Safe / Original Implementation
+ * WebGL Volumetric Shader Benchmark Engine
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // --- DOM Elements ---
-  const renderCanvas = document.getElementById('render-canvas');
+  // DOM Elements
+  const glCanvas = document.getElementById('gl-canvas');
   const graphCanvas = document.getElementById('graph-canvas');
   const btnStart = document.getElementById('btn-start');
   const btnStop = document.getElementById('btn-stop');
@@ -24,93 +23,159 @@ document.addEventListener('DOMContentLoaded', () => {
   const valScore = document.getElementById('val-score');
   const scoreRating = document.getElementById('score-rating');
 
-  // Contexts
-  const ctx = renderCanvas.getContext('2d');
   const gCtx = graphCanvas.getContext('2d');
+
+  // WebGL Setup
+  const gl = glCanvas.getContext('webgl2') || glCanvas.getContext('webgl');
+  if (!gl) {
+    alert('WebGL is not supported on this device/browser.');
+    return;
+  }
+
+  // --- WebGL Shaders (Raymarching Volumetric Engine) ---
+  const vsSource = `
+    attribute vec2 position;
+    void main() {
+      gl_Position = vec4(position, 0.0, 1.0);
+    }
+  `;
+
+  // Fragment Shader: High-load procedural 3D noise raymarcher
+  const fsSource = `
+    precision highp float;
+    uniform vec2 u_resolution;
+    uniform float u_time;
+
+    // 3D Fractal SDF Noise for Heavy GPU Computation
+    float map(vec3 p) {
+      vec3 q = p;
+      q.z += u_time * 0.8;
+      float s = 1.0;
+      float d = 0.0;
+      for (int i = 0; i < 5; i++) {
+        q = abs(q) - 0.5;
+        d += length(cross(q, vec3(0.577))) - 0.2;
+        q *= 1.4;
+      }
+      return d * 0.1;
+    }
+
+    void main() {
+      vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+      vec3 ro = vec3(0.0, 0.0, -2.5); // Ray Origin
+      vec3 rd = normalize(vec3(uv, 1.0)); // Ray Direction
+
+      float t = 0.0;
+      vec3 col = vec3(0.0);
+
+      // Heavy Raymarching Loop
+      for (int i = 0; i < 80; i++) {
+        vec3 p = ro + rd * t;
+        float d = map(p);
+        if (d < 0.001 || t > 10.0) break;
+        t += d * 0.5;
+        col += vec3(0.02, 0.01, 0.04) / (d + 0.05);
+      }
+
+      // Color Grading
+      col *= vec3(0.3, 0.5, 0.9);
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  // Compile Shader Helper
+  function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      console.error(gl.getShaderInfoLog(shader));
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  }
+
+  const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+  const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+  const program = gl.createProgram();
+
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  gl.useProgram(program);
+
+  // Fullscreen Quad Geometry
+  const positionBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    -1, -1,  1, -1, -1,  1,
+    -1,  1,  1, -1,  1,  1
+  ]), gl.STATIC_DRAW);
+
+  const positionLocation = gl.getAttribLocation(program, "position");
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+  // Uniform Locations
+  const resolutionLoc = gl.getUniformLocation(program, "u_resolution");
+  const timeLoc = gl.getUniformLocation(program, "u_time");
 
   // --- Benchmark State ---
   let isRunning = false;
   let startTime = 0;
-  let duration = 30000; // 30 seconds
-  let animationFrameId = null;
+  const duration = 30000; // 30s
+  let animId = null;
 
-  // Frame Tracking
-  let frameCount = 0;
-  let lastFrameTime = performance.now();
   let fpsHistory = [];
+  let lastTime = performance.now();
   let currentFps = 0;
   let minFps = Infinity;
   let maxFps = 0;
-
-  // Real Refresh Rate Estimation
   let estimatedHz = 60;
+
+  // Refresh Rate Detection
   detectRefreshRate((hz) => {
     estimatedHz = hz;
-    document.getElementById('val-hz').innerText = `${hz} Hz`;
+    valHz.innerText = `${hz} Hz`;
   });
 
-  // System Information Detection
   detectSystemSpecs();
   loadHistory();
 
-  // --- WebGL-inspired 2D Raymarching Simulation (Stress Engine) ---
-  function renderScene(time) {
-    const width = renderCanvas.width;
-    const height = renderCanvas.height;
-    
-    // Process heavy dynamic image buffer manipulation
-    const imgData = ctx.createImageData(width, height);
-    const data = imgData.data;
+  // Resize WebGL viewport dynamically
+  function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const displayWidth = Math.floor(glCanvas.clientWidth * dpr);
+    const displayHeight = Math.floor(glCanvas.clientHeight * dpr);
 
-    const t = time * 0.001; // Time scale
-
-    // Procedural math pattern generator for GPU/CPU stress
-    for (let x = 0; x < width; x += 2) {
-      for (let y = 0; y < height; y += 2) {
-        const u = x / width;
-        const v = y / height;
-
-        // Mathematical sine wave distortion layers
-        const val1 = Math.sin(u * 10 + t);
-        const val2 = Math.cos(v * 10 + t);
-        const val3 = Math.sin((u + v) * 20 + t * 2);
-        
-        const color = Math.floor(((val1 + val2 + val3) / 3 + 1) * 127);
-
-        const index = (x + y * width) * 4;
-        data[index] = color;                   // Red
-        data[index + 1] = Math.floor(color * 0.5); // Green
-        data[index + 2] = 255 - color;         // Blue
-        data[index + 3] = 255;                 // Alpha
-      }
+    if (glCanvas.width !== displayWidth || glCanvas.height !== displayHeight) {
+      glCanvas.width = displayWidth;
+      glCanvas.height = displayHeight;
+      gl.viewport(0, 0, glCanvas.width, glCanvas.height);
     }
-
-    ctx.putImageData(imgData, 0, 0);
   }
 
-  // --- Loop & Metrics Tracker ---
-  function benchmarkLoop(timestamp) {
+  // Loop Function
+  function render(timestamp) {
     if (!isRunning) return;
 
     if (!startTime) startTime = timestamp;
     const elapsed = timestamp - startTime;
 
-    // Delta calculation
-    const delta = timestamp - lastFrameTime;
-    lastFrameTime = timestamp;
+    const delta = timestamp - lastTime;
+    lastTime = timestamp;
 
     if (delta > 0) {
       currentFps = Math.round(1000 / delta);
       const frameTimeMs = delta.toFixed(1);
 
-      // Track Metrics
-      if (elapsed > 500) { // Exclude initial warm-up frame drops
+      if (elapsed > 500) { // Discard warm-up frame drops
         fpsHistory.push(currentFps);
         minFps = Math.min(minFps, currentFps);
         maxFps = Math.max(maxFps, currentFps);
       }
 
-      // Update UI Metrics
       valFps.innerText = currentFps;
       valFrameTime.innerHTML = `${frameTimeMs} <small>ms</small>`;
       valMinFps.innerText = minFps === Infinity ? 0 : minFps;
@@ -122,15 +187,18 @@ document.addEventListener('DOMContentLoaded', () => {
       drawGraph(currentFps);
     }
 
-    // Render graphic stress layer
-    renderScene(timestamp);
+    // Render WebGL Frame
+    resizeCanvas();
+    gl.uniform2f(resolutionLoc, glCanvas.width, glCanvas.height);
+    gl.uniform1f(timeLoc, elapsed * 0.001);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     // Update Progress
     const progress = Math.min((elapsed / duration) * 100, 100);
     progressBar.style.width = `${progress}%`;
 
     if (elapsed < duration) {
-      animationFrameId = requestAnimationFrame(benchmarkLoop);
+      animId = requestAnimationFrame(render);
     } else {
       stopBenchmark(true);
     }
@@ -141,25 +209,20 @@ document.addEventListener('DOMContentLoaded', () => {
     resetMetrics();
     isRunning = true;
     startTime = 0;
-    lastFrameTime = performance.now();
+    lastTime = performance.now();
 
-    // UI Updates
     btnStart.disabled = true;
     btnStop.disabled = false;
     statusBadge.innerText = 'Testing...';
     statusBadge.classList.add('running');
     resultsCard.classList.add('hidden');
 
-    // Handle HiDPI Canvas Scaling
-    renderCanvas.width = 480;
-    renderCanvas.height = 270;
-
-    animationFrameId = requestAnimationFrame(benchmarkLoop);
+    animId = requestAnimationFrame(render);
   }
 
   function stopBenchmark(completed = false) {
     isRunning = false;
-    cancelAnimationFrame(animationFrameId);
+    cancelAnimationFrame(animId);
 
     btnStart.disabled = false;
     btnStop.disabled = true;
@@ -185,24 +248,20 @@ document.addEventListener('DOMContentLoaded', () => {
     valMaxFps.innerText = '0';
     progressBar.style.width = '0%';
     
-    // Clear canvas
-    ctx.clearRect(0, 0, renderCanvas.width, renderCanvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
     resultsCard.classList.add('hidden');
   }
 
-  // --- Scoring & LocalStorage ---
   function calculateFinalScore() {
     const avgFps = fpsHistory.length ? Math.round(fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length) : 0;
-    
-    // Normalized performance scoring algorithm
-    const baseScore = Math.round((avgFps * 50) + (minFps * 25));
+    const baseScore = Math.round((avgFps * 60) + (minFps * 30));
     valScore.innerText = baseScore.toLocaleString();
 
     let rating = 'Standard Performance';
-    if (baseScore > 4000) rating = 'Ultra / High-End Browser Performance 🚀';
-    else if (baseScore > 2500) rating = 'Great / Smooth Performance ⚡';
-    else if (baseScore < 1500) rating = 'Entry Level / Hardware Throttled ⚠️';
+    if (baseScore > 4500) rating = 'Ultra High-End GPU Performance 🚀';
+    else if (baseScore > 2800) rating = 'Great Smooth Gaming Grade Performance ⚡';
+    else if (baseScore < 1500) rating = 'Entry Level / Thermal Throttled ⚠️';
 
     scoreRating.innerText = rating;
     resultsCard.classList.remove('hidden');
@@ -211,22 +270,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function saveResult(avg, min, score) {
-    const history = JSON.parse(localStorage.getItem('fps_bench_history') || '[]');
-    const record = {
-      date: new Date().toLocaleDateString(),
-      avg,
-      min,
-      score
-    };
-    history.unshift(record);
-    if (history.length > 5) history.pop(); // Keep last 5 entries
-    localStorage.setItem('fps_bench_history', JSON.stringify(history));
+    const history = JSON.parse(localStorage.getItem('volumetric_bench_history') || '[]');
+    history.unshift({ date: new Date().toLocaleDateString(), avg, min, score });
+    if (history.length > 5) history.pop();
+    localStorage.setItem('volumetric_bench_history', JSON.stringify(history));
     loadHistory();
   }
 
   function loadHistory() {
     const tbody = document.querySelector('#history-table tbody');
-    const history = JSON.parse(localStorage.getItem('fps_bench_history') || '[]');
+    const history = JSON.parse(localStorage.getItem('volumetric_bench_history') || '[]');
     tbody.innerHTML = '';
 
     if (history.length === 0) {
@@ -235,17 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     history.forEach(item => {
-      const row = `<tr>
+      tbody.innerHTML += `<tr>
         <td>${item.date}</td>
         <td>${item.avg} FPS</td>
         <td>${item.min} FPS</td>
         <td><strong>${item.score}</strong></td>
       </tr>`;
-      tbody.innerHTML += row;
     });
   }
 
-  // --- Realtime Graph Rendering ---
   const graphData = new Array(50).fill(0);
   function drawGraph(newFps) {
     graphData.push(newFps);
@@ -258,7 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const step = graphCanvas.width / (graphData.length - 1);
     for (let i = 0; i < graphData.length; i++) {
-      // Normalize FPS to Canvas Height (Assuming Max 144 FPS scale)
       const y = graphCanvas.height - (graphData[i] / (estimatedHz || 120)) * graphCanvas.height;
       const x = i * step;
 
@@ -268,69 +318,48 @@ document.addEventListener('DOMContentLoaded', () => {
     gCtx.stroke();
   }
 
-  // --- Hardware & System Diagnostics ---
   function detectSystemSpecs() {
-    // Screen Details
     document.getElementById('spec-res').innerText = `${window.screen.width} x ${window.screen.height}`;
     document.getElementById('spec-dpr').innerText = `${window.devicePixelRatio.toFixed(2)}x`;
-    
-    // CPU Cores
     document.getElementById('spec-cpu').innerText = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} Cores` : 'N/A';
+    document.getElementById('spec-ram').innerText = navigator.deviceMemory ? `~${navigator.deviceMemory} GB` : 'N/A';
 
-    // Device Memory (RAM)
-    document.getElementById('spec-ram').innerText = navigator.deviceMemory ? `~${navigator.deviceMemory} GB` : 'N/A (Browser Restricted)';
-
-    // User Agent / Browser
     const ua = navigator.userAgent;
-    let browserName = "Unknown Browser";
-    if (ua.includes("Chrome")) browserName = "Google Chrome";
-    else if (ua.includes("Firefox")) browserName = "Mozilla Firefox";
-    else if (ua.includes("Safari")) browserName = "Apple Safari";
-    else if (ua.includes("Edg")) browserName = "Microsoft Edge";
+    let browserName = "Browser Engine";
+    if (ua.includes("Chrome")) browserName = "Chrome Engine";
+    else if (ua.includes("Firefox")) browserName = "Firefox Engine";
+    else if (ua.includes("Safari")) browserName = "Safari Engine";
+    else if (ua.includes("Edg")) browserName = "Edge Engine";
     document.getElementById('spec-browser').innerText = browserName;
 
-    // WebGL & GPU Detection
     try {
-      const glCanvas = document.createElement('canvas');
-      const gl = glCanvas.getContext('webgl2') || glCanvas.getContext('webgl');
-      
-      if (gl) {
-        document.getElementById('spec-webgl').innerText = 'Supported (WebGL2)';
-        const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
-        if (debugInfo) {
-          const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-          document.getElementById('spec-gpu').innerText = renderer;
-        } else {
-          document.getElementById('spec-gpu').innerText = 'Generic WebGL Engine';
-        }
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      document.getElementById('spec-webgl').innerText = gl instanceof WebGL2RenderingContext ? 'WebGL 2.0' : 'WebGL 1.0';
+      if (debugInfo) {
+        document.getElementById('spec-gpu').innerText = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
       } else {
-        document.getElementById('spec-webgl').innerText = 'Not Supported';
-        document.getElementById('spec-gpu').innerText = 'Software Render';
+        document.getElementById('spec-gpu').innerText = 'Generic GPU Context';
       }
     } catch (e) {
-      document.getElementById('spec-webgl').innerText = 'Disabled';
-      document.getElementById('spec-gpu').innerText = 'Unavailable';
+      document.getElementById('spec-gpu').innerText = 'Software Rendering';
     }
   }
 
-  // Frame rate (Hz) Detection Engine
   function detectRefreshRate(callback) {
     let frames = 0;
-    let startTime = performance.now();
+    let start = performance.now();
 
-    function checkHz(now) {
+    function check(now) {
       frames++;
-      if (now - startTime >= 1000) {
-        const hz = Math.round((frames * 1000) / (now - startTime));
-        callback(hz);
+      if (now - start >= 1000) {
+        callback(Math.round((frames * 1000) / (now - start)));
       } else {
-        requestAnimationFrame(checkHz);
+        requestAnimationFrame(check);
       }
     }
-    requestAnimationFrame(checkHz);
+    requestAnimationFrame(check);
   }
 
-  // --- Event Listeners ---
   btnStart.addEventListener('click', startBenchmark);
   btnStop.addEventListener('click', () => stopBenchmark(false));
   btnReset.addEventListener('click', resetMetrics);

@@ -24,11 +24,11 @@ body {
   color: var(--text-main);
   line-height: 1.6;
   min-height: 100vh;
-  overflow-x: hidden;
   position: relative;
+  overflow-x: hidden;
 }
 
-/* Background Ambient Glow */
+/* Background Ambient Glows */
 .bg-glow {
   position: fixed;
   border-radius: 50%;
@@ -51,7 +51,7 @@ body {
   right: -100px;
 }
 
-/* Navbar */
+/* Navigation Header */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -81,7 +81,7 @@ body {
   color: var(--text-main);
 }
 
-/* Layout */
+/* Container & Layout */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -93,12 +93,12 @@ body {
 
 .hero {
   text-align: center;
-  margin: 2rem 0;
+  margin: 1.5rem 0;
 }
 .hero h1 {
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 .hero p {
   color: var(--text-muted);
@@ -112,7 +112,7 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
-/* Card Styling (Glassmorphism) */
+/* Card Styling */
 .card {
   background: var(--card-bg);
   backdrop-filter: blur(16px);
@@ -135,7 +135,7 @@ body {
   }
 }
 
-/* Canvas Section */
+/* Canvas Wrapper */
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -162,36 +162,10 @@ body {
   overflow: hidden;
   background: #000;
 }
-canvas#render-canvas {
+canvas#gl-canvas {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-/* Overlay & Spinner */
-.overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(11, 13, 23, 0.85);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-}
-.overlay.hidden, .results-card.hidden {
-  display: none;
-}
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(255, 255, 255, 0.1);
-  border-left-color: var(--accent-blue);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* Progress Bar */
@@ -249,7 +223,7 @@ canvas#render-canvas {
   flex: 1;
 }
 
-/* Metrics Card */
+/* Metrics Dashboard */
 .metrics-primary {
   display: flex;
   justify-content: space-between;
@@ -295,10 +269,13 @@ canvas#render-canvas {
   margin-top: 0.5rem;
 }
 
-/* Results Card */
+/* Results Section */
 .results-card {
   text-align: center;
   border: 1px solid rgba(139, 92, 246, 0.4);
+}
+.results-card.hidden {
+  display: none;
 }
 .score-box {
   margin: 1rem 0;
@@ -312,7 +289,7 @@ canvas#render-canvas {
   font-weight: 700;
 }
 
-/* Specs Grid */
+/* Device Specs */
 .specs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -336,7 +313,7 @@ canvas#render-canvas {
   word-break: break-word;
 }
 
-/* History Table */
+/* Table */
 .table-wrapper {
   overflow-x: auto;
   margin-top: 1rem;
